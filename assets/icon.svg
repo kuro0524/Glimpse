@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="fog" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#CECECE" stop-opacity="0"/>
+      <stop offset="18%"  stop-color="#CECECE" stop-opacity="0.18"/>
+      <stop offset="40%"  stop-color="#CECECE" stop-opacity="0.36"/>
+      <stop offset="50%"  stop-color="#CECECE" stop-opacity="0.40"/>
+      <stop offset="62%"  stop-color="#CECECE" stop-opacity="0.36"/>
+      <stop offset="82%"  stop-color="#CECECE" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#CECECE" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="44%" r="26%">
+      <stop offset="0%"   stop-color="#CECECE" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#CECECE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#111111"/>
+
+  <!-- Subtle ambient glow behind keyhole -->
+  <ellipse cx="512" cy="460" rx="240" ry="210" fill="url(#glow)"/>
+
+  <!-- Keyhole: circle (top) + rect (bottom), overlapping to form one silhouette -->
+  <!-- Circle: center (512, 420), radius 118 -->
+  <circle cx="512" cy="420" r="118" fill="#CECECE"/>
+  <!-- Slot: x center 512, width 110, top at circle center, bottom at 630 -->
+  <rect x="457" y="420" width="110" height="210" fill="#CECECE"/>
+
+  <!-- Fog band 1: main, centered around y=440 -->
+  <rect x="0" y="406" width="1024" height="68" fill="url(#fog)"/>
+  <!-- Fog band 2: thinner wisp above -->
+  <rect x="0" y="356" width="1024" height="38" fill="url(#fog)" opacity="0.50"/>
+  <!-- Fog band 3: thinner wisp below -->
+  <rect x="0" y="474" width="1024" height="30" fill="url(#fog)" opacity="0.38"/>
+</svg>
