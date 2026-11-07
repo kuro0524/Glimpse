@@ -18,7 +18,7 @@ import * as albumExport from '../utils/albumExport';
 import { promptExportToPhotos } from '../utils/photosExport';
 import PromptModal from '../components/PromptModal';
 import ProgressModal from '../components/ProgressModal';
-import LongPressMenu from '../components/LongPressMenu';
+import LongPressMenu, { openMenu } from '../components/LongPressMenu';
 
 const CARD_PAD = 16;
 const CARD_GAP = 10;
@@ -51,7 +51,7 @@ function AlbumCard({ album, onPress, menu, refreshKey, cardW }) {
 
   return (
     <LongPressMenu menu={menu} style={{ width: cardW }}>
-      <TouchableOpacity style={{ width: cardW }} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity style={{ width: cardW }} onPress={onPress} onLongPress={() => openMenu(menu)} activeOpacity={0.8}>
         <AlbumThumbnail albumId={album.id} refreshKey={refreshKey} cardW={cardW} />
         <Text style={styles.cardName} numberOfLines={1}>{album.name}</Text>
         <Text style={styles.cardCount}>{count}件</Text>
@@ -214,6 +214,7 @@ export default function AlbumListView({ navigation }) {
       ...(isProtected ? [] : [{ id: 'delete', title: '削除', image: 'trash', destructive: true }]),
     ];
     return {
+      title: album.name,
       actions,
       onAction: (id) => {
         if (id === 'export') promptExportToPhotos(album, setPhotosExportProgress);

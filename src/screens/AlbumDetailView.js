@@ -26,7 +26,7 @@ import PromptModal from '../components/PromptModal';
 import AlbumPickerModal from '../components/AlbumPickerModal';
 import ProgressModal from '../components/ProgressModal';
 import { promptExportToPhotos } from '../utils/photosExport';
-import LongPressMenu from '../components/LongPressMenu';
+import LongPressMenu, { openMenu } from '../components/LongPressMenu';
 
 const CELL_GAP = 2;
 const SECTION_HEADER_HEIGHT = 36; // paddingTop:16 + fontSize:13 (~lineHeight:8) + paddingBottom:6
@@ -89,6 +89,8 @@ function MediaCellInner({ photo, isSelecting, isSelected, onPress, menu, cellW }
     <TouchableOpacity
       style={[styles.cellBase, { width: cellW, height: cellW }]}
       onPress={onPress}
+      onLongPress={isSelecting ? undefined : () => openMenu(menu)}
+      delayLongPress={350}
       activeOpacity={0.8}
     >
       <Image
@@ -153,7 +155,7 @@ function SubAlbumCard({ album, onPress, menu, refreshKey }) {
 
   return (
     <LongPressMenu menu={menu}>
-    <TouchableOpacity style={styles.subCard} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.subCard} onPress={onPress} onLongPress={() => openMenu(menu)} activeOpacity={0.8}>
       <View style={{ width: 88, height: 88, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 8, overflow: 'hidden', backgroundColor: '#3A3A3C' }}>
         {[0, 1, 2, 3].map(i => (
           <View key={i} style={{ width: 44, height: 44, backgroundColor: '#3A3A3C' }}>
@@ -689,6 +691,7 @@ export default function AlbumDetailView({ navigation, route }) {
   // サブアルバムを長押ししたときのメニュー
   function buildSubAlbumMenu(album) {
     return {
+      title: album.name,
       actions: [
         { id: 'export', title: '写真アプリに書き出し', image: 'square.and.arrow.down' },
         { id: 'rename', title: '名前を変更', image: 'pencil' },

@@ -1,26 +1,30 @@
-// 長押しでiOS純正のメニューを出すための共通部品。
-// menu = { actions: [{ id, title, image, destructive }], onAction: (id) => void }
-// menu が null のときは何もせず、中身をそのまま表示する（選択モード中など）。
-import React from 'react';
-import { MenuView } from '@react-native-menu/menu';
+// 長押しメニューの共通部品。
+// menu = { title?, actions: [{ id, title, destructive }], onAction: (id) => void }
+// 長押しでiOS純正のアクションシートを出す。
+// （@react-native-menu/menu はタップを横取りして写真やアルバムが開けなくなるため使わない）
+import { ActionSheetIOS } from 'react-native';
 
-export default function LongPressMenu({ menu, style, children }) {
-  if (!menu || menu.actions.length === 0) return children;
-  const actions = menu.actions.map(a => ({
-    id: a.id,
-    title: a.title,
-    image: a.image,
-    attributes: a.destructive ? { destructive: true } : undefined,
-  }));
-  return (
-    <MenuView
-      style={style}
-      shouldOpenOnLongPress
-      themeVariant="dark"
-      actions={actions}
-      onPressAction={({ nativeEvent }) => menu.onAction(nativeEvent.event)}
-    >
-      {children}
-    </MenuView>
+export function openMenu(menu) {
+  if (!menu || menu.actions.length === 0) return;
+  const options = [...menu.actions.map(a => a.title), 'キャンセル'];
+  const destructiveButtonIndex = menu.actions
+    .map((a, i) => (a.destructive ? i : -1))
+    .filter(i => i >= 0);
+  ActionSheetIOS.showActionSheetWithOptions(
+    {
+      title: menu.title,
+      options,
+      cancelButtonIndex: options.length - 1,
+      destructiveButtonIndex,
+      userInterfaceStyle: 'dark',
+    },
+    (index) => {
+      if (index < menu.actions.length) menu.onAction(menu.actions[index].id);
+    }
   );
+}
+
+// 以前の書き方との互換用。中身をそのまま表示するだけ
+export default function LongPressMenu({ children }) {
+  return children;
 }
