@@ -126,7 +126,7 @@ function MediaCellInner({ photo, isSelecting, isSelected, onPress, menu, cellW }
         <View style={[styles.selectOverlay, isSelected && styles.selectOverlayActive]}>
           {isSelected && (
             <View style={styles.checkCircle}>
-              <Ionicons name="checkmark" size={14} color="#fff" />
+              <Ionicons name="checkmark" size={14} color="#111111" />
             </View>
           )}
         </View>
@@ -1074,13 +1074,13 @@ const styles = StyleSheet.create({
   },
   selectOverlayActive: {
     backgroundColor: 'rgba(235,235,245,0.20)',
-    borderColor: '#0A84FF',
+    borderColor: '#EBEBF5',
   },
   checkCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#EBEBF5',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -279,7 +279,7 @@ export default function LockView({ navigation, route, onAuthenticated, onNavigat
           <Text style={styles.keyDisplayText} selectable>{generatedKey}</Text>
         </View>
         <TouchableOpacity style={styles.copyBtn} onPress={() => copyKey(generatedKey)} activeOpacity={0.7}>
-          <Ionicons name="copy-outline" size={16} color="#0A84FF" />
+          <Ionicons name="copy-outline" size={16} color="#EBEBF5" />
           <Text style={styles.copyBtnText}>{copied ? 'コピーしました' : 'コピー'}</Text>
         </TouchableOpacity>
         <View style={styles.warningBox}>
@@ -297,7 +297,7 @@ export default function LockView({ navigation, route, onAuthenticated, onNavigat
           <Ionicons
             name={keySaved ? 'checkbox' : 'square-outline'}
             size={24}
-            color={keySaved ? '#0A84FF' : '#636366'}
+            color={keySaved ? '#EBEBF5' : '#636366'}
           />
           <Text style={styles.checkLabel}>保存しました</Text>
         </TouchableOpacity>
@@ -326,7 +326,7 @@ export default function LockView({ navigation, route, onAuthenticated, onNavigat
           <Text style={styles.keyDisplayText} selectable>{storedKeyDisplay}</Text>
         </View>
         <TouchableOpacity style={styles.copyBtn} onPress={() => copyKey(storedKeyDisplay)} activeOpacity={0.7}>
-          <Ionicons name="copy-outline" size={16} color="#0A84FF" />
+          <Ionicons name="copy-outline" size={16} color="#EBEBF5" />
           <Text style={styles.copyBtnText}>{copied ? 'コピーしました' : 'コピー'}</Text>
         </TouchableOpacity>
         <View style={styles.warningBox}>
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   keyDisplayText: {
-    color: '#0A84FF',
+    color: '#EBEBF5',
     fontSize: 26,
     fontWeight: '600',
     letterSpacing: 4,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   copyBtnText: {
-    color: '#0A84FF',
+    color: '#EBEBF5',
     fontSize: 15,
     fontWeight: '500',
   },
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtn: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#EBEBF5',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 32,
@@ -572,10 +572,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtnDisabled: {
-    backgroundColor: '#1C3A5E',
+    opacity: 0.35,
   },
   primaryBtnText: {
-    color: '#EBEBF5',
+    color: '#111111',
     fontSize: 17,
     fontWeight: '600',
   },
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryBtnText: {
-    color: '#0A84FF',
+    color: '#EBEBF5',
     fontSize: 16,
   },
   recoveryInput: {
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   linkBtnText: {
-    color: '#0A84FF',
+    color: '#EBEBF5',
     fontSize: 14,
   },
 });

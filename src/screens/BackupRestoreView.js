@@ -284,7 +284,7 @@ export default function BackupRestoreView({ navigation, route, mode: modeProp, o
                 <ActivityIndicator color="#EBEBF5" />
               ) : (
                 <>
-                  <Ionicons name="cloud-upload-outline" size={20} color="#EBEBF5" />
+                  <Ionicons name="cloud-upload-outline" size={20} color="#111111" />
                   <Text style={styles.actionBtnText}>バックアップを作成</Text>
                 </>
               )}
@@ -301,7 +301,7 @@ export default function BackupRestoreView({ navigation, route, mode: modeProp, o
           </Text>
 
           <TouchableOpacity style={styles.filePickerBtn} onPress={handlePickFile} activeOpacity={0.8}>
-            <Ionicons name="document-outline" size={20} color="#0A84FF" />
+            <Ionicons name="document-outline" size={20} color="#EBEBF5" />
             <Text style={styles.filePickerText} numberOfLines={1}>
               {restoreFileName || 'ファイルを選択…'}
             </Text>
@@ -333,7 +333,7 @@ export default function BackupRestoreView({ navigation, route, mode: modeProp, o
               <ActivityIndicator color="#EBEBF5" />
             ) : (
               <>
-                <Ionicons name="cloud-download-outline" size={20} color="#EBEBF5" />
+                <Ionicons name="cloud-download-outline" size={20} color="#111111" />
                 <Text style={styles.actionBtnText}>復元する</Text>
               </>
             )}
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  filePickerText: { color: '#0A84FF', fontSize: 14, flex: 1 },
+  filePickerText: { color: '#EBEBF5', fontSize: 14, flex: 1 },
   inputLabel: { color: '#8E8E93', fontSize: 12, fontWeight: '500', marginTop: 4 },
   input: {
     backgroundColor: '#3A3A3C',
@@ -392,12 +392,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#EBEBF5',
     borderRadius: 10,
     paddingVertical: 14,
     marginTop: 4,
   },
-  actionBtnRestore: { backgroundColor: '#30D158' },
+  actionBtnRestore: { backgroundColor: '#EBEBF5' },
   actionBtnDisabled: { opacity: 0.4 },
-  actionBtnText: { color: '#EBEBF5', fontSize: 15, fontWeight: '600' },
+  actionBtnText: { color: '#111111', fontSize: 15, fontWeight: '600' },
 });
