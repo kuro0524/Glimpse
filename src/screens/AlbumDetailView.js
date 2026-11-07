@@ -75,7 +75,10 @@ function groupPhotosByDate(photos, dateField) {
   ].filter(s => s.items.length > 0);
 }
 
-function MediaCell({ photo, isSelecting, isSelected, onPress, onLongPress, cellW }) {
+// 縦方向のなぞり選択を始めるまでに指を止める時間
+const HOLD_TO_DRAG_MS = 220;
+
+function MediaCellInner({ photo, isSelecting, isSelected, onPress, onLongPress, cellW }) {
   const [broken, setBroken] = useState(false);
   const isVideo = photo.media_type === 'video';
   const displayUri = photo.thumbnailUri ?? photo.uri;
@@ -129,6 +132,14 @@ function MediaCell({ photo, isSelecting, isSelected, onPress, onLongPress, cellW
     </TouchableOpacity>
   );
 }
+
+// 選択状態が変わったセルだけ再描画して、なぞり選択を軽くする
+const MediaCell = React.memo(MediaCellInner, (prev, next) =>
+    prev.photo === next.photo &&
+    prev.isSelecting === next.isSelecting &&
+    prev.isSelected === next.isSelected &&
+    prev.cellW === next.cellW
+);
 
 function SubAlbumCard({ album, onPress, onLongPress, refreshKey }) {
   const [uris, setUris] = useState([]);
@@ -212,6 +223,7 @@ export default function AlbumDetailView({ navigation, route }) {
   const lastPageYRef = useRef(0);
   const autoScrollTimerRef = useRef(null);
   const touchStartRef = useRef({ x: 0, y: 0 });
+  const touchDownTimeRef = useRef(0);
   const isExportingRef = useRef(false);
   const cellYOffsetsRef = useRef([]);
   const containerWidthRef = useRef(0);
@@ -353,8 +365,12 @@ export default function AlbumDetailView({ navigation, route }) {
       if (!isSelectingRef.current) return false;
       const adx = Math.abs(gestureState.dx);
       const ady = Math.abs(gestureState.dy);
-      if (adx < 8) return false;
-      if (ady > adx) return false;
+      // 横に動かし始めた → すぐなぞり選択
+      const horizontal = adx >= 8 && ady <= adx;
+      // 指を少し止めてから動かした → 縦方向でもなぞり選択（素早い縦スワイプはスクロール）
+      const heldThenMoved =
+        Date.now() - touchDownTimeRef.current >= HOLD_TO_DRAG_MS && (adx >= 4 || ady >= 4);
+      if (!horizontal && !heldThenMoved) return false;
       touchStartRef.current = {
         x: evt.nativeEvent.pageX - gestureState.dx,
         y: evt.nativeEvent.pageY - gestureState.dy,
@@ -762,6 +778,7 @@ export default function AlbumDetailView({ navigation, route }) {
             containerWidthRef.current = w;
           });
         }}
+        onTouchStart={() => { touchDownTimeRef.current = Date.now(); }}
         {...panResponder.panHandlers}
       >
         <FlatList

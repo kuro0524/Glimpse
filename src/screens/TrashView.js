@@ -24,7 +24,10 @@ function daysRemaining(deletedAt) {
   return Math.max(0, Math.ceil(secondsLeft / 86400));
 }
 
-function TrashCell({ photo, isSelecting, isSelected, onPress, onLongPress, cellW }) {
+// 縦方向のなぞり選択を始めるまでに指を止める時間
+const HOLD_TO_DRAG_MS = 220;
+
+function TrashCellInner({ photo, isSelecting, isSelected, onPress, onLongPress, cellW }) {
   const [broken, setBroken] = useState(false);
   const isVideo = photo.media_type === 'video';
   const displayUri = photo.thumbnailUri ?? photo.uri;
@@ -73,6 +76,14 @@ function TrashCell({ photo, isSelecting, isSelected, onPress, onLongPress, cellW
   );
 }
 
+// 選択状態が変わったセルだけ再描画して、なぞり選択を軽くする
+const TrashCell = React.memo(TrashCellInner, (prev, next) =>
+    prev.photo === next.photo &&
+    prev.isSelecting === next.isSelecting &&
+    prev.isSelected === next.isSelected &&
+    prev.cellW === next.cellW
+);
+
 export default function TrashView({ navigation }) {
   const { width: windowWidth } = useWindowDimensions();
   const NUM_COLS = windowWidth > 600 ? 5 : 3;
@@ -109,6 +120,7 @@ export default function TrashView({ navigation }) {
   const lastPageYRef = useRef(0);
   const autoScrollTimerRef = useRef(null);
   const touchStartRef = useRef({ x: 0, y: 0 });
+  const touchDownTimeRef = useRef(0);
   // ──────────────────────────────────────────────────────────────────────────
 
   useEffect(() => { isSelectingRef.current = isSelecting; }, [isSelecting]);
@@ -257,8 +269,12 @@ export default function TrashView({ navigation }) {
       if (!isSelectingRef.current) return false;
       const adx = Math.abs(gestureState.dx);
       const ady = Math.abs(gestureState.dy);
-      if (adx < 8) return false;
-      if (ady > adx) return false;
+      // 横に動かし始めた → すぐなぞり選択
+      const horizontal = adx >= 8 && ady <= adx;
+      // 指を少し止めてから動かした → 縦方向でもなぞり選択（素早い縦スワイプはスクロール）
+      const heldThenMoved =
+        Date.now() - touchDownTimeRef.current >= HOLD_TO_DRAG_MS && (adx >= 4 || ady >= 4);
+      if (!horizontal && !heldThenMoved) return false;
       touchStartRef.current = {
         x: evt.nativeEvent.pageX - gestureState.dx,
         y: evt.nativeEvent.pageY - gestureState.dy,
@@ -370,6 +386,7 @@ export default function TrashView({ navigation }) {
             containerWidthRef.current = w;
           });
         }}
+        onTouchStart={() => { touchDownTimeRef.current = Date.now(); }}
         {...panResponder.panHandlers}
       >
         <FlatList
