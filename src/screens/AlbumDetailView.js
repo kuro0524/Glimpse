@@ -507,11 +507,17 @@ export default function AlbumDetailView({ navigation, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       allowsMultipleSelection: true,
-      quality: 0.9,
+      // 元写真を削除しても画質が落ちないよう、元の画質・形式のまま取り込む
+      quality: 1,
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
     });
     if (result.canceled) return;
 
     const assets = result.assets;
+    // 取り込みに成功した写真の元写真ID（写真アプリ側）
+    const importedAssetIds = [];
+    let importSucceeded = false;
     setImportProgress({ visible: true, current: 0, total: assets.length });
     try {
       for (let i = 0; i < assets.length; i++) {
@@ -535,13 +541,52 @@ export default function AlbumDetailView({ navigation, route }) {
           takenAt,
           thumbnailUri,
         });
+        if (asset.assetId) importedAssetIds.push(asset.assetId);
         setImportProgress({ visible: true, current: i + 1, total: assets.length });
       }
+      importSucceeded = true;
       await loadData();
     } catch (e) {
       Alert.alert('エラー', `インポートに失敗しました。\n${e?.message ?? String(e)}`);
     } finally {
       setImportProgress({ visible: false, current: 0, total: 0 });
+    }
+
+    // すべて取り込めたときだけ、元写真の削除を案内する
+    if (importSucceeded) askDeleteOriginals(assets.length, importedAssetIds);
+  }
+
+  function askDeleteOriginals(importedCount, assetIds) {
+    if (assetIds.length === 0) return;
+    const notDeletable = importedCount - assetIds.length;
+    const note = notDeletable > 0
+      ? `\n\n※ ${notDeletable}件は写真アプリ側の元写真を特定できないため削除されません。`
+      : '';
+    Alert.alert(
+      `${importedCount}項目を取り込みました`,
+      `写真アプリにある元の写真を削除しますか？\n削除した写真は「最近削除した項目」に30日間残ります。${note}`,
+      [
+        { text: '残す', style: 'cancel' },
+        { text: '削除する', style: 'destructive', onPress: () => deleteOriginals(assetIds) },
+      ]
+    );
+  }
+
+  async function deleteOriginals(assetIds) {
+    const perm = await MediaLibrary.requestPermissionsAsync();
+    if (perm.status !== 'granted' || perm.accessPrivileges !== 'all') {
+      Alert.alert(
+        'フルアクセスが必要です',
+        '元の写真を削除するには、設定アプリでGlimpseの写真へのアクセスを「フルアクセス」にしてください。'
+      );
+      return;
+    }
+    try {
+      // iOSの確認ダイアログが表示される。キャンセルされた場合は false か例外になる
+      const deleted = await MediaLibrary.deleteAssetsAsync(assetIds);
+      if (deleted) showToast('元の写真を削除しました');
+    } catch (_) {
+      // ユーザーがiOSの確認でキャンセルした場合。何もしない
     }
   }
 
