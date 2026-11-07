@@ -25,6 +25,7 @@ import * as albumExport from '../utils/albumExport';
 import PromptModal from '../components/PromptModal';
 import AlbumPickerModal from '../components/AlbumPickerModal';
 import ProgressModal from '../components/ProgressModal';
+import { promptExportToPhotos } from '../utils/photosExport';
 
 const CELL_GAP = 2;
 const SECTION_HEADER_HEIGHT = 36; // paddingTop:16 + fontSize:13 (~lineHeight:8) + paddingBottom:6
@@ -184,6 +185,7 @@ export default function AlbumDetailView({ navigation, route }) {
   const [importProgress, setImportProgress] = useState({ visible: false, current: 0, total: 0 });
   const [deleteProgress, setDeleteProgress] = useState({ visible: false, current: 0, total: 0 });
   const [exportProgress, setExportProgress] = useState({ visible: false, current: 0, total: 0 });
+  const [photosExportProgress, setPhotosExportProgress] = useState({ visible: false, current: 0, total: 0 });
 
   // ── drag-to-select (manual mode only) ────────────────────────────────────
   const containerRef = useRef(null);
@@ -476,14 +478,15 @@ export default function AlbumDetailView({ navigation, route }) {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['キャンセル', '写真・動画を追加', 'サブアルバムを作成', '並び順を変更', 'エクスポート'],
+          options: ['キャンセル', '写真・動画を追加', 'サブアルバムを作成', '並び順を変更', '写真アプリに書き出し', 'ZIPでエクスポート'],
           cancelButtonIndex: 0,
         },
         (i) => {
           if (i === 1) handleImport();
           if (i === 2) handleNewSubAlbum();
           if (i === 3) showSortPicker();
-          if (i === 4) handleExport();
+          if (i === 4) promptExportToPhotos({ id: albumId, name: albumName }, setPhotosExportProgress);
+          if (i === 5) handleExport();
         }
       );
     } else {
@@ -491,7 +494,8 @@ export default function AlbumDetailView({ navigation, route }) {
         { text: '写真・動画を追加', onPress: handleImport },
         { text: 'サブアルバムを作成', onPress: handleNewSubAlbum },
         { text: '並び順を変更', onPress: showSortPicker },
-        { text: 'エクスポート', onPress: handleExport },
+        { text: '写真アプリに書き出し', onPress: () => promptExportToPhotos({ id: albumId, name: albumName }, setPhotosExportProgress) },
+        { text: 'ZIPでエクスポート', onPress: handleExport },
         { text: 'キャンセル', style: 'cancel' },
       ]);
     }
@@ -625,6 +629,7 @@ export default function AlbumDetailView({ navigation, route }) {
 
   function showSubAlbumMenu(album) {
     Alert.alert(album.name, '', [
+      { text: '写真アプリに書き出し', onPress: () => promptExportToPhotos(album, setPhotosExportProgress) },
       {
         text: '名前を変更',
         onPress: () => setPrompt({
@@ -880,6 +885,12 @@ export default function AlbumDetailView({ navigation, route }) {
         title="エクスポート中…"
         current={exportProgress.current}
         total={exportProgress.total}
+      />
+      <ProgressModal
+        visible={photosExportProgress.visible}
+        title="写真アプリに書き出し中…"
+        current={photosExportProgress.current}
+        total={photosExportProgress.total}
       />
 
       <PromptModal

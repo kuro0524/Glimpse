@@ -15,6 +15,7 @@ import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatli
 import * as DocumentPicker from 'expo-document-picker';
 import * as db from '../utils/db';
 import * as albumExport from '../utils/albumExport';
+import { promptExportToPhotos } from '../utils/photosExport';
 import PromptModal from '../components/PromptModal';
 import ProgressModal from '../components/ProgressModal';
 
@@ -95,6 +96,7 @@ export default function AlbumListView({ navigation }) {
   const [prompt, setPrompt] = useState({ visible: false, title: '', defaultValue: '', onConfirm: null });
 
   const [importProgress, setImportProgress] = useState({ visible: false, current: 0, total: 0 });
+  const [photosExportProgress, setPhotosExportProgress] = useState({ visible: false, current: 0, total: 0 });
 
   const loadAlbums = useCallback(async () => {
     const data = await db.getAlbums(null);
@@ -203,6 +205,7 @@ export default function AlbumListView({ navigation }) {
     Alert.alert(album.name, '', [
       ...(isProtected ? [] : [{ text: '名前を変更', onPress: () => handleRename(album) }]),
       { text: 'サブアルバムを作成', onPress: () => handleNewSub(album) },
+      { text: '写真アプリに書き出し', onPress: () => promptExportToPhotos(album, setPhotosExportProgress) },
       { text: '並び替え', onPress: () => setIsReordering(true) },
       ...(isProtected ? [] : [{ text: '削除', style: 'destructive', onPress: () => handleDelete(album) }]),
       { text: 'キャンセル', style: 'cancel' },
@@ -301,6 +304,12 @@ export default function AlbumListView({ navigation }) {
         title="インポート中…"
         current={importProgress.current}
         total={importProgress.total}
+      />
+      <ProgressModal
+        visible={photosExportProgress.visible}
+        title="写真アプリに書き出し中…"
+        current={photosExportProgress.current}
+        total={photosExportProgress.total}
       />
 
       <PromptModal
