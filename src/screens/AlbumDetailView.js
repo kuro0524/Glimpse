@@ -26,6 +26,7 @@ import PromptModal from '../components/PromptModal';
 import AlbumPickerModal from '../components/AlbumPickerModal';
 import ProgressModal from '../components/ProgressModal';
 import { promptExportToPhotos } from '../utils/photosExport';
+import LongPressMenu from '../components/LongPressMenu';
 
 const CELL_GAP = 2;
 const SECTION_HEADER_HEIGHT = 36; // paddingTop:16 + fontSize:13 (~lineHeight:8) + paddingBottom:6
@@ -78,18 +79,17 @@ function groupPhotosByDate(photos, dateField) {
 // 縦方向のなぞり選択を始めるまでに指を止める時間
 const HOLD_TO_DRAG_MS = 220;
 
-function MediaCellInner({ photo, isSelecting, isSelected, onPress, onLongPress, cellW }) {
+function MediaCellInner({ photo, isSelecting, isSelected, onPress, menu, cellW }) {
   const [broken, setBroken] = useState(false);
   const isVideo = photo.media_type === 'video';
   const displayUri = photo.thumbnailUri ?? photo.uri;
 
   return (
+    <LongPressMenu menu={isSelecting ? null : menu} style={{ width: cellW, height: cellW }}>
     <TouchableOpacity
       style={[styles.cellBase, { width: cellW, height: cellW }]}
       onPress={onPress}
-      onLongPress={onLongPress}
       activeOpacity={0.8}
-      delayLongPress={350}
     >
       <Image
         source={{ uri: displayUri }}
@@ -130,6 +130,7 @@ function MediaCellInner({ photo, isSelecting, isSelected, onPress, onLongPress, 
         </View>
       )}
     </TouchableOpacity>
+    </LongPressMenu>
   );
 }
 
@@ -141,7 +142,7 @@ const MediaCell = React.memo(MediaCellInner, (prev, next) =>
     prev.cellW === next.cellW
 );
 
-function SubAlbumCard({ album, onPress, onLongPress, refreshKey }) {
+function SubAlbumCard({ album, onPress, menu, refreshKey }) {
   const [uris, setUris] = useState([]);
   const [count, setCount] = useState(0);
 
@@ -151,7 +152,8 @@ function SubAlbumCard({ album, onPress, onLongPress, refreshKey }) {
   }, [album.id, refreshKey]);
 
   return (
-    <TouchableOpacity style={styles.subCard} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8}>
+    <LongPressMenu menu={menu}>
+    <TouchableOpacity style={styles.subCard} onPress={onPress} activeOpacity={0.8}>
       <View style={{ width: 88, height: 88, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 8, overflow: 'hidden', backgroundColor: '#3A3A3C' }}>
         {[0, 1, 2, 3].map(i => (
           <View key={i} style={{ width: 44, height: 44, backgroundColor: '#3A3A3C' }}>
@@ -162,6 +164,7 @@ function SubAlbumCard({ album, onPress, onLongPress, refreshKey }) {
       <Text style={styles.subCardName} numberOfLines={1}>{album.name}</Text>
       <Text style={styles.subCardCount}>{count}件</Text>
     </TouchableOpacity>
+    </LongPressMenu>
   );
 }
 
@@ -643,37 +646,84 @@ export default function AlbumDetailView({ navigation, route }) {
     });
   }
 
-  function showSubAlbumMenu(album) {
-    Alert.alert(album.name, '', [
-      { text: '写真アプリに書き出し', onPress: () => promptExportToPhotos(album, setPhotosExportProgress) },
-      {
-        text: '名前を変更',
-        onPress: () => setPrompt({
-          visible: true,
-          title: 'アルバム名を変更',
-          defaultValue: album.name,
-          onConfirm: async (name) => {
-            setPrompt(p => ({ ...p, visible: false }));
-            await db.renameAlbum(album.id, name);
-            await loadData();
-          },
-        }),
+  // 写真を長押ししたときのメニュー
+  function buildPhotoMenu(photo) {
+    return {
+      actions: [
+        { id: 'save', title: 'カメラロールに保存', image: 'square.and.arrow.down' },
+        { id: 'delete', title: '削除', image: 'trash', destructive: true },
+      ],
+      onAction: (id) => {
+        if (id === 'save') saveOneToPhotos(photo);
+        if (id === 'delete') deleteOne(photo);
       },
+    };
+  }
+
+  async function saveOneToPhotos(photo) {
+    const { status } = await MediaLibrary.requestPermissionsAsync(true);
+    if (status !== 'granted') {
+      Alert.alert('アクセス許可が必要', '設定アプリでフォトライブラリへの書き込みを許可してください。');
+      return;
+    }
+    try {
+      const row = await db.getPhotoById(photo.id);
+      if (row?.uri) await MediaLibrary.createAssetAsync(row.uri);
+      showToast('カメラロールに保存しました');
+    } catch (e) {
+      Alert.alert('エラー', `保存に失敗しました。\n${e?.message ?? String(e)}`);
+    }
+  }
+
+  async function deleteOne(photo) {
+    // ゴミ箱に移すだけなので確認は出さない（7日間は復元できる）
+    try {
+      await db.deletePhotos([photo.id]);
+      await loadData();
+      showToast('ゴミ箱に移動しました');
+    } catch (e) {
+      Alert.alert('エラー', `削除に失敗しました。\n${e?.message ?? String(e)}`);
+    }
+  }
+
+  // サブアルバムを長押ししたときのメニュー
+  function buildSubAlbumMenu(album) {
+    return {
+      actions: [
+        { id: 'export', title: '写真アプリに書き出し', image: 'square.and.arrow.down' },
+        { id: 'rename', title: '名前を変更', image: 'pencil' },
+        { id: 'delete', title: '削除', image: 'trash', destructive: true },
+      ],
+      onAction: (id) => {
+        if (id === 'export') promptExportToPhotos(album, setPhotosExportProgress);
+        if (id === 'rename') renameSubAlbum(album);
+        if (id === 'delete') confirmDeleteSubAlbum(album);
+      },
+    };
+  }
+
+  function renameSubAlbum(album) {
+    setPrompt({
+      visible: true,
+      title: 'アルバム名を変更',
+      defaultValue: album.name,
+      onConfirm: async (name) => {
+        setPrompt(p => ({ ...p, visible: false }));
+        await db.renameAlbum(album.id, name);
+        await loadData();
+      },
+    });
+  }
+
+  function confirmDeleteSubAlbum(album) {
+    Alert.alert('アルバムを削除', `「${album.name}」とすべての写真・動画を削除しますか？`, [
       {
         text: '削除',
         style: 'destructive',
-        onPress: () =>
-          Alert.alert('アルバムを削除', `「${album.name}」とすべての写真・動画を削除しますか？`, [
-            {
-              text: '削除',
-              style: 'destructive',
-              onPress: async () => {
-                await db.deleteAlbum(album.id);
-                await loadData();
-              },
-            },
-            { text: 'キャンセル', style: 'cancel' },
-          ]),
+        onPress: async () => {
+          await db.deleteAlbum(album.id);
+          await loadData();
+        },
       },
       { text: 'キャンセル', style: 'cancel' },
     ]);
@@ -804,7 +854,7 @@ export default function AlbumDetailView({ navigation, route }) {
                     album={sa}
                     refreshKey={refreshKey}
                     onPress={() => navigation.push('AlbumDetail', { albumId: sa.id, albumName: sa.name })}
-                    onLongPress={() => showSubAlbumMenu(sa)}
+                    menu={buildSubAlbumMenu(sa)}
                   />
                 ))}
               </ScrollView>
@@ -832,12 +882,7 @@ export default function AlbumDetailView({ navigation, route }) {
                         navigation.navigate('PhotoViewer', { albumId, initialIndex: flatIdx, sortMode });
                       }
                     }}
-                    onLongPress={() => {
-                      if (!isSelecting) {
-                        setIsSelecting(true);
-                        setSelectedIds(new Set([photo.id]));
-                      }
-                    }}
+                    menu={buildPhotoMenu(photo)}
                   />
                 ))}
                 {Array(NUM_COLS - item.photos.length).fill(null).map((_, i) => (

@@ -18,6 +18,7 @@ import * as albumExport from '../utils/albumExport';
 import { promptExportToPhotos } from '../utils/photosExport';
 import PromptModal from '../components/PromptModal';
 import ProgressModal from '../components/ProgressModal';
+import LongPressMenu from '../components/LongPressMenu';
 
 const CARD_PAD = 16;
 const CARD_GAP = 10;
@@ -42,18 +43,20 @@ function AlbumThumbnail({ albumId, refreshKey, cardW }) {
   );
 }
 
-function AlbumCard({ album, onPress, onLongPress, refreshKey, cardW }) {
+function AlbumCard({ album, onPress, menu, refreshKey, cardW }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     db.getAlbumPhotoCount(album.id).then(setCount);
   }, [album.id, refreshKey]);
 
   return (
-    <TouchableOpacity style={{ width: cardW }} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8}>
-      <AlbumThumbnail albumId={album.id} refreshKey={refreshKey} cardW={cardW} />
-      <Text style={styles.cardName} numberOfLines={1}>{album.name}</Text>
-      <Text style={styles.cardCount}>{count}件</Text>
-    </TouchableOpacity>
+    <LongPressMenu menu={menu} style={{ width: cardW }}>
+      <TouchableOpacity style={{ width: cardW }} onPress={onPress} activeOpacity={0.8}>
+        <AlbumThumbnail albumId={album.id} refreshKey={refreshKey} cardW={cardW} />
+        <Text style={styles.cardName} numberOfLines={1}>{album.name}</Text>
+        <Text style={styles.cardCount}>{count}件</Text>
+      </TouchableOpacity>
+    </LongPressMenu>
   );
 }
 
@@ -200,16 +203,26 @@ export default function AlbumListView({ navigation }) {
     }
   }
 
-  function showAlbumMenu(album) {
+  // アルバムを長押ししたときのメニュー
+  function buildAlbumMenu(album) {
     const isProtected = album.id === db.ORPHAN_ALBUM_ID;
-    Alert.alert(album.name, '', [
-      ...(isProtected ? [] : [{ text: '名前を変更', onPress: () => handleRename(album) }]),
-      { text: 'サブアルバムを作成', onPress: () => handleNewSub(album) },
-      { text: '写真アプリに書き出し', onPress: () => promptExportToPhotos(album, setPhotosExportProgress) },
-      { text: '並び替え', onPress: () => setIsReordering(true) },
-      ...(isProtected ? [] : [{ text: '削除', style: 'destructive', onPress: () => handleDelete(album) }]),
-      { text: 'キャンセル', style: 'cancel' },
-    ]);
+    const actions = [
+      { id: 'export', title: '写真アプリに書き出し', image: 'square.and.arrow.down' },
+      ...(isProtected ? [] : [{ id: 'rename', title: '名前を変更', image: 'pencil' }]),
+      { id: 'newSub', title: 'サブアルバムを作成', image: 'folder.badge.plus' },
+      { id: 'reorder', title: '並び替え', image: 'arrow.up.arrow.down' },
+      ...(isProtected ? [] : [{ id: 'delete', title: '削除', image: 'trash', destructive: true }]),
+    ];
+    return {
+      actions,
+      onAction: (id) => {
+        if (id === 'export') promptExportToPhotos(album, setPhotosExportProgress);
+        if (id === 'rename') handleRename(album);
+        if (id === 'newSub') handleNewSub(album);
+        if (id === 'reorder') setIsReordering(true);
+        if (id === 'delete') handleDelete(album);
+      },
+    };
   }
 
   function handleRename(album) {
@@ -287,7 +300,7 @@ export default function AlbumListView({ navigation }) {
               cardW={CARD_W}
               refreshKey={refreshKey}
               onPress={() => navigation.navigate('AlbumDetail', { albumId: item.id, albumName: item.name })}
-              onLongPress={() => showAlbumMenu(item)}
+              menu={buildAlbumMenu(item)}
             />
           )}
           ListEmptyComponent={
