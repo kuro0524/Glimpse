@@ -2,7 +2,7 @@
   "expo": {
     "name": "Glimpse",
     "slug": "glimpse",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "description": "プライベートな写真保管庫",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,13 +14,15 @@
       "backgroundColor": "#111111"
     },
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.glimpse.app",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.totonowanaihibi.glimpse",
       "buildNumber": "1",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "UIFileSharingEnabled": false,
-        "LSSupportsOpeningDocumentsInPlace": false
+        "LSSupportsOpeningDocumentsInPlace": false,
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "選択した写真をiOSの写真アプリに保存します。"
       }
     },
     "android": {
@@ -28,7 +30,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#111111"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,8 +43,33 @@
       "expo-sqlite",
       [
         "expo-image-picker",
-        { "photosPermission": "写真の保存と管理のためにフォトライブラリへのアクセスを許可してください。" }
+        {
+          "photosPermission": "写真の保存と管理のためにフォトライブラリへのアクセスを許可してください。"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "写真の保存と管理のためにフォトライブラリへのアクセスを許可してください。",
+          "savePhotosPermission": "選択した写真をiOSの写真アプリに保存します。",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-video",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.5"
+          }
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5e1de4c1-a981-4194-ad0b-e050c3ad8855"
+      }
+    }
   }
 }

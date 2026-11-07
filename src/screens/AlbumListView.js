@@ -6,29 +6,30 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  Dimensions,
+  useWindowDimensions,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import * as DocumentPicker from 'expo-document-picker';
 import * as db from '../utils/db';
+import * as albumExport from '../utils/albumExport';
 import PromptModal from '../components/PromptModal';
+import ProgressModal from '../components/ProgressModal';
 
-const SCREEN_W = Dimensions.get('window').width;
 const CARD_PAD = 16;
 const CARD_GAP = 10;
-const CARD_W = (SCREEN_W - CARD_PAD * 2 - CARD_GAP) / 2;
 
-function AlbumThumbnail({ albumId, refreshKey }) {
+function AlbumThumbnail({ albumId, refreshKey, cardW }) {
   const [uris, setUris] = useState([]);
   useEffect(() => {
     db.getAlbumThumbnailUris(albumId).then(setUris);
   }, [albumId, refreshKey]);
 
-  const half = CARD_W / 2;
+  const half = cardW / 2;
   return (
-    <View style={{ width: CARD_W, height: CARD_W, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden', borderRadius: 8 }}>
+    <View style={{ width: cardW, height: cardW, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden', borderRadius: 8 }}>
       {[0, 1, 2, 3].map(i => (
         <View key={i} style={{ width: half, height: half, backgroundColor: '#3A3A3C' }}>
           {uris[i] && (
@@ -40,17 +41,17 @@ function AlbumThumbnail({ albumId, refreshKey }) {
   );
 }
 
-function AlbumCard({ album, onPress, onLongPress, refreshKey }) {
+function AlbumCard({ album, onPress, onLongPress, refreshKey, cardW }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     db.getAlbumPhotoCount(album.id).then(setCount);
   }, [album.id, refreshKey]);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8}>
-      <AlbumThumbnail albumId={album.id} refreshKey={refreshKey} />
+    <TouchableOpacity style={{ width: cardW }} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8}>
+      <AlbumThumbnail albumId={album.id} refreshKey={refreshKey} cardW={cardW} />
       <Text style={styles.cardName} numberOfLines={1}>{album.name}</Text>
-      <Text style={styles.cardCount}>{count}枚</Text>
+      <Text style={styles.cardCount}>{count}件</Text>
     </TouchableOpacity>
   );
 }
@@ -84,10 +85,16 @@ function ReorderRow({ item, drag, isActive, refreshKey }) {
 }
 
 export default function AlbumListView({ navigation }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const NUM_COLS = windowWidth > 600 ? 4 : 2;
+  const CARD_W = (windowWidth - CARD_PAD * 2 - CARD_GAP * (NUM_COLS - 1)) / NUM_COLS;
+
   const [albums, setAlbums] = useState([]);
   const [isReordering, setIsReordering] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [prompt, setPrompt] = useState({ visible: false, title: '', defaultValue: '', onConfirm: null });
+
+  const [importProgress, setImportProgress] = useState({ visible: false, current: 0, total: 0 });
 
   const loadAlbums = useCallback(async () => {
     const data = await db.getAlbums(null);
@@ -122,9 +129,14 @@ export default function AlbumListView({ navigation }) {
       headerRight: isReordering
         ? undefined
         : () => (
-            <TouchableOpacity onPress={handleNewAlbum} style={styles.iconBtn}>
-              <Ionicons name="add" size={30} color="#EBEBF5" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={handleImportPickFile} style={styles.iconBtn}>
+                <Ionicons name="arrow-down-circle-outline" size={24} color="#EBEBF5" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleNewAlbum} style={styles.iconBtn}>
+                <Ionicons name="add" size={30} color="#EBEBF5" />
+              </TouchableOpacity>
+            </View>
           ),
     });
   }, [navigation, isReordering, albums]);
@@ -142,12 +154,57 @@ export default function AlbumListView({ navigation }) {
     });
   }
 
+  async function handleImportPickFile() {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    const fileName = asset.name ?? 'ファイル';
+    const fileUri = asset.uri;
+
+    Alert.alert(
+      'アルバムをインポート',
+      `「${fileName}」をインポートしますか？`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        { text: 'インポート', onPress: () => doImport(fileUri) },
+      ]
+    );
+  }
+
+  async function doImport(fileUri) {
+    setImportProgress({ visible: true, current: 0, total: 0 });
+    try {
+      const result = await albumExport.importAlbumFromZip(
+        fileUri,
+        (current, total) => setImportProgress({ visible: true, current, total })
+      );
+      setImportProgress({ visible: false, current: 0, total: 0 });
+      Alert.alert(
+        'インポート完了',
+        `「${result.albumName}」を${result.photoCount}件の写真・動画でインポートしました。`
+      );
+      loadAlbums();
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      setImportProgress({ visible: false, current: 0, total: 0 });
+      if (e.message === 'CORRUPT_FILE') {
+        Alert.alert('ファイルが無効です', '有効なGlimpse ZIPファイルを選択してください。');
+      } else {
+        Alert.alert('エラー', `インポートに失敗しました。\n${e?.message ?? String(e)}`);
+      }
+    }
+  }
+
   function showAlbumMenu(album) {
+    const isProtected = album.id === db.ORPHAN_ALBUM_ID;
     Alert.alert(album.name, '', [
-      { text: '名前を変更', onPress: () => handleRename(album) },
+      ...(isProtected ? [] : [{ text: '名前を変更', onPress: () => handleRename(album) }]),
       { text: 'サブアルバムを作成', onPress: () => handleNewSub(album) },
       { text: '並び替え', onPress: () => setIsReordering(true) },
-      { text: '削除', style: 'destructive', onPress: () => handleDelete(album) },
+      ...(isProtected ? [] : [{ text: '削除', style: 'destructive', onPress: () => handleDelete(album) }]),
       { text: 'キャンセル', style: 'cancel' },
     ]);
   }
@@ -159,8 +216,12 @@ export default function AlbumListView({ navigation }) {
       defaultValue: album.name,
       onConfirm: async (name) => {
         setPrompt(p => ({ ...p, visible: false }));
-        await db.renameAlbum(album.id, name);
-        loadAlbums();
+        try {
+          await db.renameAlbum(album.id, name);
+          loadAlbums();
+        } catch (e) {
+          Alert.alert('変更できません', '「未分類」の名前は変更できません。');
+        }
       },
     });
   }
@@ -179,13 +240,17 @@ export default function AlbumListView({ navigation }) {
   }
 
   async function handleDelete(album) {
-    Alert.alert('アルバムを削除', `「${album.name}」とすべての写真を削除しますか？`, [
+    Alert.alert('アルバムを削除', `「${album.name}」とすべての写真・動画を削除しますか？`, [
       {
         text: '削除',
         style: 'destructive',
         onPress: async () => {
-          await db.deleteAlbum(album.id);
-          loadAlbums();
+          try {
+            await db.deleteAlbum(album.id);
+            loadAlbums();
+          } catch (e) {
+            Alert.alert('削除できません', '「未分類」は削除できません。');
+          }
         },
       },
       { text: 'キャンセル', style: 'cancel' },
@@ -206,15 +271,17 @@ export default function AlbumListView({ navigation }) {
         />
       ) : (
         <FlatList
+          key={NUM_COLS}
           data={albums}
           keyExtractor={a => a.id}
-          numColumns={2}
-          contentContainerStyle={styles.grid}
-          columnWrapperStyle={{ gap: CARD_GAP }}
+          numColumns={NUM_COLS}
+          contentContainerStyle={[styles.grid, { padding: CARD_PAD, gap: CARD_GAP }]}
+          columnWrapperStyle={NUM_COLS > 1 ? { gap: CARD_GAP } : undefined}
           renderItem={({ item }) => (
             <AlbumCard
               key={`${item.id}-${refreshKey}`}
               album={item}
+              cardW={CARD_W}
               refreshKey={refreshKey}
               onPress={() => navigation.navigate('AlbumDetail', { albumId: item.id, albumName: item.name })}
               onLongPress={() => showAlbumMenu(item)}
@@ -228,6 +295,13 @@ export default function AlbumListView({ navigation }) {
           }
         />
       )}
+
+      <ProgressModal
+        visible={importProgress.visible}
+        title="インポート中…"
+        current={importProgress.current}
+        total={importProgress.total}
+      />
 
       <PromptModal
         visible={prompt.visible}
@@ -260,13 +334,7 @@ const styles = StyleSheet.create({
     color: '#EBEBF5',
     fontSize: 16,
   },
-  grid: {
-    padding: CARD_PAD,
-    gap: CARD_GAP,
-  },
-  card: {
-    width: CARD_W,
-  },
+  grid: {},
   cardName: {
     color: '#EBEBF5',
     fontSize: 13,

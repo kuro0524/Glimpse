@@ -25,7 +25,7 @@ export default function AlbumPickerModal({ visible, excludeId, onPick, onCancel 
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>アルバムを選択</Text>
-            <TouchableOpacity onPress={onCancel}>
+            <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
               <Text style={styles.cancel}>キャンセル</Text>
             </TouchableOpacity>
           </View>
@@ -75,6 +75,11 @@ const styles = StyleSheet.create({
     color: '#EBEBF5',
     fontSize: 16,
     fontWeight: '600',
+  },
+  cancelBtn: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingLeft: 16,
   },
   cancel: {
     color: '#EBEBF5',
