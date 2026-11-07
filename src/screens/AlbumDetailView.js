@@ -96,7 +96,7 @@ function MediaCellInner({ photo, isSelecting, isSelected, onPress, menu, cellW }
       <Image
         source={{ uri: displayUri }}
         style={{ width: cellW, height: cellW }}
-        resizeMode="cover"
+        resizeMode="contain"
         onError={() => setBroken(true)}
       />
       {broken && (
@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create({
   },
   photoGrid: { paddingBottom: 8 },
   photoRow: { flexDirection: 'row' },
-  cellBase: { backgroundColor: '#2C2C2E', overflow: 'hidden' },
+  cellBase: { backgroundColor: '#111111', overflow: 'hidden' }, // 写真全体を表示するので、余白は背景に近い色に
   brokenOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#2C2C2E',
